@@ -41,19 +41,56 @@
         color: #1f2937;
         max-width: 28rem;
       }
+
+      .words-widget-header {
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .words-widget-meta,
+      .words-widget-count {
+        font-size: 0.875rem;
+        color: #334155;
+      }
+
+      .words-widget-results {
+        margin-top: 0.5rem;
+        max-height: 14rem;
+        overflow-y: auto;
+        padding-right: 0.25rem;
+      }
+
+      .words-widget-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .words-widget-item,
+      .words-widget-empty {
+        padding: 0.35rem 0.5rem;
+        border-bottom: 1px solid #dbe4ef;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .words-widget-error {
+        margin-top: 0.5rem;
+        color: #b91c1c;
+        font-weight: 600;
+      }
     </style>
   </head>
   <body>
     <form id="widget-form">
-      <label for="widget-message">Widget text</label>
+      <label for="widget-message">Regex pattern</label>
       <input
         id="widget-message"
         name="message"
         type="text"
-        placeholder="Type something"
-        value="Embedded in a static HTML page"
+        placeholder="Try ^p or /berry$/i"
+        value="a"
       />
-      <button type="submit">Show in widget</button>
+      <button type="submit">Search words</button>
     </form>
 
     <div id="widget-target"></div>

@@ -3,21 +3,41 @@ const assert = require("node:assert/strict");
 
 const { buildWidgetMarkup, mountWidget, bindForm } = require("../src/widget.js");
 
-test("buildWidgetMarkup uses default text", () => {
+test("buildWidgetMarkup defaults to full list when expression is empty", () => {
   const html = buildWidgetMarkup();
-  assert.match(html, /Hello from Words Widget/);
+  assert.match(html, /Pattern: \(all words\)/);
+  assert.match(html, /20 matches/);
+  assert.match(html, /apple/);
+  assert.match(html, /watermelon/);
 });
 
-test("buildWidgetMarkup escapes unsafe HTML", () => {
-  const html = buildWidgetMarkup('<script>alert("x")</script>');
-  assert.match(html, /&lt;script&gt;alert\(&quot;x&quot;\)&lt;\/script&gt;/);
+test("buildWidgetMarkup matches words with plain expression", () => {
+  const html = buildWidgetMarkup("^p");
+  assert.match(html, /3 matches/);
+  assert.match(html, /papaya/);
+  assert.match(html, /pear/);
+  assert.match(html, /plum/);
+  assert.doesNotMatch(html, /banana/);
+});
+
+test("buildWidgetMarkup supports slash-delimited regex with flags", () => {
+  const html = buildWidgetMarkup("/berry$/i");
+  assert.match(html, /3 matches/);
+  assert.match(html, /elderberry/);
+  assert.match(html, /raspberry/);
+  assert.match(html, /strawberry/);
+});
+
+test("buildWidgetMarkup reports invalid regex", () => {
+  const html = buildWidgetMarkup("(");
+  assert.match(html, /Invalid regular expression/);
 });
 
 test("mountWidget writes markup to target", () => {
   const fakeElement = { innerHTML: "" };
-  mountWidget(fakeElement, "Ready");
-  assert.match(fakeElement.innerHTML, /Words Widget:/);
-  assert.match(fakeElement.innerHTML, /Ready/);
+  mountWidget(fakeElement, "an");
+  assert.match(fakeElement.innerHTML, /banana/);
+  assert.match(fakeElement.innerHTML, /orange/);
 });
 
 test("mountWidget throws when target is invalid", () => {
@@ -26,23 +46,40 @@ test("mountWidget throws when target is invalid", () => {
 
 test("bindForm renders initial value and updates on submit", () => {
   const target = { innerHTML: "" };
-  const input = { value: "First value" };
+  const input = { value: "^p" };
   let submitHandler;
+  let keydownHandler;
+  let requestSubmitCount = 0;
   const form = {
     addEventListener(eventName, handler) {
       if (eventName === "submit") {
         submitHandler = handler;
       }
+    },
+    requestSubmit() {
+      requestSubmitCount += 1;
+      submitHandler({
+        preventDefault() {}
+      });
     }
   };
 
-  const returnedHandler = bindForm(form, input, target);
-  assert.equal(typeof returnedHandler, "function");
-  assert.equal(returnedHandler, submitHandler);
-  assert.match(target.innerHTML, /First value/);
+  input.addEventListener = function (eventName, handler) {
+    if (eventName === "keydown") {
+      keydownHandler = handler;
+    }
+  };
+
+  const handlers = bindForm(form, input, target);
+  assert.equal(typeof handlers.onSubmit, "function");
+  assert.equal(typeof handlers.onKeyDown, "function");
+  assert.equal(handlers.onSubmit, submitHandler);
+  assert.equal(handlers.onKeyDown, keydownHandler);
+  assert.match(target.innerHTML, /papaya/);
+  assert.match(target.innerHTML, /pear/);
 
   let prevented = false;
-  input.value = "Second value";
+  input.value = "^w";
   submitHandler({
     preventDefault() {
       prevented = true;
@@ -50,7 +87,22 @@ test("bindForm renders initial value and updates on submit", () => {
   });
 
   assert.equal(prevented, true);
-  assert.match(target.innerHTML, /Second value/);
+  assert.match(target.innerHTML, /watermelon/);
+
+  let enterPrevented = false;
+  input.value = "berry$";
+  keydownHandler({
+    key: "Enter",
+    preventDefault() {
+      enterPrevented = true;
+    }
+  });
+
+  assert.equal(enterPrevented, true);
+  assert.equal(requestSubmitCount, 1);
+  assert.match(target.innerHTML, /elderberry/);
+  assert.match(target.innerHTML, /raspberry/);
+  assert.match(target.innerHTML, /strawberry/);
 });
 
 test("bindForm throws when form is invalid", () => {
