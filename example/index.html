@@ -118,6 +118,30 @@
       const input = document.getElementById("widget-message");
       const loadStatus = document.getElementById("load-status");
       const wordsUrl = "../src/words";
+      const queryParamName = "q";
+      const defaultPattern = input.value;
+
+      function readPatternFromUrl() {
+        const url = new URL(window.location.href);
+        return url.searchParams.has(queryParamName) ? url.searchParams.get(queryParamName) : null;
+      }
+
+      function buildUrlForPattern(pattern) {
+        const url = new URL(window.location.href);
+
+        if (pattern === "") {
+          url.searchParams.delete(queryParamName);
+        } else {
+          url.searchParams.set(queryParamName, pattern);
+        }
+
+        return url;
+      }
+
+      function applyPattern(pattern) {
+        input.value = pattern;
+        window.WordsWidget.mountWidget(target, pattern);
+      }
 
       function renderLoadStatus(status) {
         if (status.source === "url") {
@@ -135,7 +159,29 @@
       async function initializeWidget() {
         await window.WordsWidget.setWordListUrl(wordsUrl);
         renderLoadStatus(window.WordsWidget.getWordListStatus());
+
+        const urlPattern = readPatternFromUrl();
+        if (urlPattern !== null) {
+          input.value = urlPattern;
+        }
+
         window.WordsWidget.bindForm(form, input, target);
+
+        form.addEventListener("submit", function () {
+          const nextUrl = buildUrlForPattern(input.value);
+          const nextUrlString = nextUrl.pathname + nextUrl.search + nextUrl.hash;
+          const currentUrlString =
+            window.location.pathname + window.location.search + window.location.hash;
+
+          if (nextUrlString !== currentUrlString) {
+            window.history.pushState({ pattern: input.value }, "", nextUrlString);
+          }
+        });
+
+        window.addEventListener("popstate", function () {
+          const pattern = readPatternFromUrl();
+          applyPattern(pattern === null ? defaultPattern : pattern);
+        });
       }
 
       initializeWidget();
