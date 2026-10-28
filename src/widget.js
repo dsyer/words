@@ -126,6 +126,51 @@
     return WORD_LIST.slice();
   }
 
+  function resetWordList() {
+    WORD_LIST = DEFAULT_WORD_LIST.slice();
+    return WORD_LIST.slice();
+  }
+
+  function parseWordListText(text) {
+    return String(text)
+      .split(/\r?\n/)
+      .map(function (word) {
+        return word.trim();
+      })
+      .filter(function (word) {
+        return word.length > 0;
+      });
+  }
+
+  async function setWordListUrl(wordListUrl) {
+    if (!wordListUrl) {
+      return resetWordList();
+    }
+
+    if (typeof fetch !== "function") {
+      return resetWordList();
+    }
+
+    try {
+      var response = await fetch(wordListUrl);
+      var words;
+
+      if (!response || !response.ok) {
+        return resetWordList();
+      }
+
+      words = parseWordListText(await response.text());
+
+      if (words.length === 0) {
+        return resetWordList();
+      }
+
+      return setWordList(words);
+    } catch (error) {
+      return resetWordList();
+    }
+  }
+
   function buildWidgetMarkup(expression) {
     var result = searchWords(expression);
     var header = '<div class="words-widget-header"><strong>Word Search</strong></div>';
@@ -230,6 +275,7 @@
     buildWidgetMarkup: buildWidgetMarkup,
     mountWidget: mountWidget,
     bindForm: bindForm,
-    setWordList: setWordList
+    setWordList: setWordList,
+    setWordListUrl: setWordListUrl
   };
 });

@@ -101,7 +101,12 @@
       const form = document.getElementById("widget-form");
       const input = document.getElementById("widget-message");
 
-      window.WordsWidget.bindForm(form, input, target);
+      async function initializeWidget() {
+        await window.WordsWidget.setWordListUrl("../src/words");
+        window.WordsWidget.bindForm(form, input, target);
+      }
+
+      initializeWidget();
     </script>
   </body>
 </html>

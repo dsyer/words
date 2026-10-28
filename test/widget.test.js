@@ -1,7 +1,13 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { buildWidgetMarkup, mountWidget, bindForm, setWordList } = require("../src/widget.js");
+const {
+  buildWidgetMarkup,
+  mountWidget,
+  bindForm,
+  setWordList,
+  setWordListUrl
+} = require("../src/widget.js");
 
 const DEFAULT_WORDS = [
   "apple",
@@ -160,4 +166,57 @@ test("setWordList updates search source and returns a copy", () => {
 test("setWordList throws for invalid values", () => {
   assert.throws(() => setWordList("not-an-array"), TypeError);
   assert.throws(() => setWordList(["ok", 42]), TypeError);
+});
+
+test("setWordListUrl loads newline-delimited words from URL", async () => {
+  const originalFetch = global.fetch;
+
+  global.fetch = async function () {
+    return {
+      ok: true,
+      async text() {
+        return "cobra\ncoral\ncomet\n";
+      }
+    };
+  };
+
+  try {
+    const loadedWords = await setWordListUrl("/some/url");
+    assert.deepEqual(loadedWords, ["cobra", "coral", "comet"]);
+
+    const html = buildWidgetMarkup("^co");
+    assert.match(html, /3 matches/);
+    assert.match(html, /cobra/);
+    assert.match(html, /coral/);
+    assert.match(html, /comet/);
+    assert.doesNotMatch(html, /banana/);
+  } finally {
+    global.fetch = originalFetch;
+    setWordList(DEFAULT_WORDS);
+  }
+});
+
+test("setWordListUrl falls back to defaults when URL is missing or fetch fails", async () => {
+  const originalFetch = global.fetch;
+
+  setWordList(["alpha"]);
+  await setWordListUrl();
+  let html = buildWidgetMarkup("^a");
+  assert.match(html, /1 matches/);
+  assert.match(html, /apple/);
+  assert.doesNotMatch(html, /alpha/);
+
+  global.fetch = async function () {
+    throw new Error("network failed");
+  };
+
+  setWordList(["beta"]);
+  await setWordListUrl("/broken/url");
+  html = buildWidgetMarkup("^b");
+  assert.match(html, /1 matches/);
+  assert.match(html, /banana/);
+  assert.doesNotMatch(html, /beta/);
+
+  global.fetch = originalFetch;
+  setWordList(DEFAULT_WORDS);
 });
