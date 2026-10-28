@@ -34,8 +34,32 @@
     return target;
   }
 
+  function bindForm(form, input, target) {
+    if (!form || typeof form.addEventListener !== "function") {
+      throw new TypeError("form must be a DOM element with addEventListener");
+    }
+
+    if (!input || typeof input.value !== "string") {
+      throw new TypeError("input must be a form field with a string value");
+    }
+
+    mountWidget(target, input.value);
+
+    function onSubmit(event) {
+      if (event && typeof event.preventDefault === "function") {
+        event.preventDefault();
+      }
+
+      mountWidget(target, input.value);
+    }
+
+    form.addEventListener("submit", onSubmit);
+    return onSubmit;
+  }
+
   return {
     buildWidgetMarkup: buildWidgetMarkup,
-    mountWidget: mountWidget
+    mountWidget: mountWidget,
+    bindForm: bindForm
   };
 });
