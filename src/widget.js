@@ -56,6 +56,9 @@
   function parseSearchExpression(rawExpression) {
     var source = rawExpression == null ? "" : String(rawExpression).trim();
     var slashMatch;
+    var hasStartAnchor;
+    var hasEndAnchor;
+    var effectiveSource;
 
     if (source === "") {
       return {
@@ -68,6 +71,10 @@
     }
 
     slashMatch = source.match(/^\/(.+)\/([a-z]*)$/i);
+
+    hasStartAnchor = source.charAt(0) === "^";
+    hasEndAnchor = hasUnescapedTerminalDollar(source);
+    effectiveSource = hasStartAnchor || hasEndAnchor ? source : "^" + source + "$";
 
     try {
       if (slashMatch) {
@@ -82,9 +89,9 @@
 
       return {
         expression: source,
-        displayExpression: "/" + source + "/i",
+        displayExpression: "/" + effectiveSource + "/i",
         isEmpty: false,
-        regex: new RegExp(source, "i"),
+        regex: new RegExp(effectiveSource, "i"),
         error: null
       };
     } catch (error) {
@@ -96,6 +103,24 @@
         error: error
       };
     }
+  }
+
+  function hasUnescapedTerminalDollar(source) {
+    var i;
+    var backslashCount = 0;
+
+    if (!source || source.charAt(source.length - 1) !== "$") {
+      return false;
+    }
+
+    i = source.length - 2;
+
+    while (i >= 0 && source.charAt(i) === "\\") {
+      backslashCount += 1;
+      i -= 1;
+    }
+
+    return backslashCount % 2 === 0;
   }
 
   function buildTestRegex(regex) {

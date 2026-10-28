@@ -41,13 +41,29 @@ test("buildWidgetMarkup does not search when expression is empty", () => {
   assert.doesNotMatch(html, /apple/);
 });
 
-test("buildWidgetMarkup matches words with plain expression", () => {
+test("buildWidgetMarkup matches a whole word by default", () => {
+  const html = buildWidgetMarkup("plum");
+  assert.ok(html.includes("Pattern: /^plum$/i"));
+  assert.match(html, /1 matches/);
+  assert.match(html, /<li class="words-widget-item">plum<\/li>/);
+  assert.doesNotMatch(html, /papaya/);
+});
+
+test("buildWidgetMarkup keeps explicit start anchor from user", () => {
   const html = buildWidgetMarkup("^p");
+  assert.ok(html.includes("Pattern: /^p/i"));
   assert.match(html, /3 matches/);
   assert.match(html, /papaya/);
   assert.match(html, /pear/);
   assert.match(html, /plum/);
   assert.doesNotMatch(html, /banana/);
+});
+
+test("buildWidgetMarkup keeps explicit end anchor from user", () => {
+  const html = buildWidgetMarkup("m$");
+  assert.ok(html.includes("Pattern: /m$/i"));
+  assert.match(html, /1 matches/);
+  assert.match(html, /<li class="words-widget-item">plum<\/li>/);
 });
 
 test("buildWidgetMarkup supports slash-delimited regex with flags", () => {
@@ -65,9 +81,9 @@ test("buildWidgetMarkup reports invalid regex", () => {
 
 test("mountWidget writes markup to target", () => {
   const fakeElement = { innerHTML: "" };
-  mountWidget(fakeElement, "an");
-  assert.match(fakeElement.innerHTML, /banana/);
-  assert.match(fakeElement.innerHTML, /orange/);
+  mountWidget(fakeElement, "plum");
+  assert.match(fakeElement.innerHTML, /1 matches/);
+  assert.match(fakeElement.innerHTML, /<li class="words-widget-item">plum<\/li>/);
 });
 
 test("mountWidget throws when target is invalid", () => {
