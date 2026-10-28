@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Words Widget Example</title>
+    <style>
+      .words-widget {
+        padding: 0.75rem 1rem;
+        border: 1px solid #ccd5e1;
+        border-radius: 0.5rem;
+        font-family: sans-serif;
+        background: #f8fbff;
+        color: #1f2937;
+        max-width: 28rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="widget-target"></div>
+
+    <script src="../src/widget.js"></script>
+    <script>
+      window.WordsWidget.mountWidget(
+        document.getElementById("widget-target"),
+        "Embedded in a static HTML page"
+      );
+    </script>
+  </body>
+</html>

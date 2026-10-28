@@ -1,0 +1,14 @@
+{
+  "name": "words-widget",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal embeddable JavaScript widget with unit tests",
+  "main": "src/widget.js",
+  "scripts": {
+    "test": "node --test",
+    "test:watch": "node --test --watch"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
