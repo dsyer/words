@@ -5,7 +5,7 @@
     global.WordsWidget = factory();
   }
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
-  var WORD_LIST = [
+  var DEFAULT_WORD_LIST = [
     "apple",
     "banana",
     "cherry",
@@ -27,6 +27,7 @@
     "tangerine",
     "watermelon"
   ];
+  var WORD_LIST = DEFAULT_WORD_LIST.slice();
 
   function escapeHtml(value) {
     return String(value)
@@ -106,6 +107,23 @@
       parsed: parsed,
       matches: matches
     };
+  }
+
+  function setWordList(words) {
+    if (!Array.isArray(words)) {
+      throw new TypeError("word list must be an array of strings");
+    }
+
+    if (
+      !words.every(function (word) {
+        return typeof word === "string";
+      })
+    ) {
+      throw new TypeError("word list must be an array of strings");
+    }
+
+    WORD_LIST = words.slice();
+    return WORD_LIST.slice();
   }
 
   function buildWidgetMarkup(expression) {
@@ -211,6 +229,7 @@
   return {
     buildWidgetMarkup: buildWidgetMarkup,
     mountWidget: mountWidget,
-    bindForm: bindForm
+    bindForm: bindForm,
+    setWordList: setWordList
   };
 });

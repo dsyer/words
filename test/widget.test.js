@@ -1,7 +1,30 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { buildWidgetMarkup, mountWidget, bindForm } = require("../src/widget.js");
+const { buildWidgetMarkup, mountWidget, bindForm, setWordList } = require("../src/widget.js");
+
+const DEFAULT_WORDS = [
+  "apple",
+  "banana",
+  "cherry",
+  "date",
+  "elderberry",
+  "fig",
+  "grape",
+  "guava",
+  "kiwi",
+  "lemon",
+  "mango",
+  "nectarine",
+  "orange",
+  "papaya",
+  "pear",
+  "plum",
+  "raspberry",
+  "strawberry",
+  "tangerine",
+  "watermelon"
+];
 
 test("buildWidgetMarkup defaults to full list when expression is empty", () => {
   const html = buildWidgetMarkup();
@@ -115,4 +138,26 @@ test("bindForm throws when input is invalid", () => {
   const target = { innerHTML: "" };
   const form = { addEventListener() {} };
   assert.throws(() => bindForm(form, null, target), TypeError);
+});
+
+test("setWordList updates search source and returns a copy", () => {
+  const customWords = ["alpha", "beta", "gamma"];
+  const result = setWordList(customWords);
+
+  assert.deepEqual(result, customWords);
+  assert.notEqual(result, customWords);
+
+  const html = buildWidgetMarkup("a$");
+  assert.match(html, /3 matches/);
+  assert.match(html, /alpha/);
+  assert.match(html, /beta/);
+  assert.match(html, /gamma/);
+  assert.doesNotMatch(html, /watermelon/);
+
+  setWordList(DEFAULT_WORDS);
+});
+
+test("setWordList throws for invalid values", () => {
+  assert.throws(() => setWordList("not-an-array"), TypeError);
+  assert.throws(() => setWordList(["ok", 42]), TypeError);
 });
