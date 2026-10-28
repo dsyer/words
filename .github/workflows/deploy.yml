@@ -1,0 +1,30 @@
+name: Deploy Site
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Deploy
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    - name: Build
+      run: |
+          npm run build:site
+    - name: Publish
+      uses: chihqiang/gh-pages-action@v1
+      with:
+        publish_dir: build
+        commit_message: 'Deploy Static Site to Github gh-pages Branch'
+        cname: words.dsyer.com
+        token: ${{ secrets.GITHUB_TOKEN }}  # Required, authentication token
