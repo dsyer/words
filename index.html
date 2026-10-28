@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Words Widget Example</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 2rem;
+      }
+
+      form {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+      }
+
+      input[type="text"] {
+        min-width: 16rem;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #ccd5e1;
+        border-radius: 0.375rem;
+      }
+
+      button {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #1f2937;
+        border-radius: 0.375rem;
+        background: #1f2937;
+        color: #ffffff;
+        cursor: pointer;
+      }
+
+      .words-widget {
+        padding: 0.75rem 1rem;
+        border: 1px solid #ccd5e1;
+        border-radius: 0.5rem;
+        background: #f8fbff;
+        color: #1f2937;
+        max-width: 28rem;
+      }
+
+      .words-widget-header {
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .words-widget-meta,
+      .words-widget-count {
+        font-size: 0.875rem;
+        color: #334155;
+      }
+
+      .words-widget-results {
+        margin-top: 0.5rem;
+        max-height: 14rem;
+        overflow-y: auto;
+        padding-right: 0.25rem;
+      }
+
+      .words-widget-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      .words-widget-item,
+      .words-widget-empty {
+        padding: 0.35rem 0.5rem;
+        border-bottom: 1px solid #dbe4ef;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .words-widget-error {
+        margin-top: 0.5rem;
+        color: #b91c1c;
+        font-weight: 600;
+      }
+
+      .load-status {
+        margin: 0 0 0.75rem;
+        font-size: 0.875rem;
+        color: #334155;
+      }
+
+      .load-status-warning {
+        color: #92400e;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <form id="widget-form">
+      <label for="widget-message">Regex pattern</label>
+      <input
+        id="widget-message"
+        name="message"
+        type="text"
+        placeholder="Try p.. or /berry$/i"
+        value="p.."
+        autocorrect="off"
+        autocapitalize="off"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button type="submit">Search words</button>
+    </form>
+
+    <p id="load-status" class="load-status" role="status" aria-live="polite"></p>
+    <div id="widget-target"></div>
+
+    <script src="./widget.js?v=0423490"></script>
+    <script>
+      const target = document.getElementById("widget-target");
+      const form = document.getElementById("widget-form");
+      const input = document.getElementById("widget-message");
+      const loadStatus = document.getElementById("load-status");
+      const wordsUrl = "./words?v=0423490";
+      const queryParamName = "q";
+      const defaultPattern = input.value;
+
+      function readPatternFromUrl() {
+        const url = new URL(window.location.href);
+        return url.searchParams.has(queryParamName) ? url.searchParams.get(queryParamName) : null;
+      }
+
+      function buildUrlForPattern(pattern) {
+        const url = new URL(window.location.href);
+
+        if (pattern === "") {
+          url.searchParams.delete(queryParamName);
+        } else {
+          url.searchParams.set(queryParamName, pattern);
+        }
+
+        return url;
+      }
+
+      function applyPattern(pattern) {
+        input.value = pattern;
+        window.WordsWidget.mountWidget(target, pattern);
+      }
+
+      function renderLoadStatus(status) {
+        if (status.source === "url") {
+          loadStatus.textContent = "Word list loaded from URL (" + status.wordCount + " words).";
+          loadStatus.className = "load-status";
+          return;
+        }
+
+        loadStatus.textContent =
+          "Using fallback word list (" + status.wordCount + " words)." +
+          (status.error ? " Reason: " + status.error + "." : "");
+        loadStatus.className = "load-status load-status-warning";
+      }
+
+      async function initializeWidget() {
+        await window.WordsWidget.setWordListUrl(wordsUrl);
+        renderLoadStatus(window.WordsWidget.getWordListStatus());
+
+        const urlPattern = readPatternFromUrl();
+        if (urlPattern !== null) {
+          input.value = urlPattern;
+        }
+
+        window.WordsWidget.bindForm(form, input, target);
+
+        form.addEventListener("submit", function () {
+          const nextUrl = buildUrlForPattern(input.value);
+          const nextUrlString = nextUrl.pathname + nextUrl.search + nextUrl.hash;
+          const currentUrlString =
+            window.location.pathname + window.location.search + window.location.hash;
+
+          if (nextUrlString !== currentUrlString) {
+            window.history.pushState({ pattern: input.value }, "", nextUrlString);
+          }
+        });
+
+        window.addEventListener("popstate", function () {
+          const pattern = readPatternFromUrl();
+          applyPattern(pattern === null ? defaultPattern : pattern);
+        });
+      }
+
+      initializeWidget();
+    </script>
+  </body>
+</html>
