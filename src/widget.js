@@ -28,6 +28,21 @@
     "watermelon"
   ];
   var WORD_LIST = DEFAULT_WORD_LIST.slice();
+  var WORD_LIST_STATUS = {
+    source: "default",
+    url: null,
+    fallback: false,
+    error: null
+  };
+
+  function setWordListStatus(source, url, fallback, error) {
+    WORD_LIST_STATUS = {
+      source: source,
+      url: url || null,
+      fallback: Boolean(fallback),
+      error: error || null
+    };
+  }
 
   function escapeHtml(value) {
     return String(value)
@@ -45,7 +60,8 @@
     if (source === "") {
       return {
         expression: source,
-        displayExpression: "(all words)",
+        displayExpression: "(enter a regex)",
+        isEmpty: true,
         regex: null,
         error: null
       };
@@ -58,6 +74,7 @@
         return {
           expression: source,
           displayExpression: source,
+          isEmpty: false,
           regex: new RegExp(slashMatch[1], slashMatch[2]),
           error: null
         };
@@ -66,6 +83,7 @@
       return {
         expression: source,
         displayExpression: "/" + source + "/i",
+        isEmpty: false,
         regex: new RegExp(source, "i"),
         error: null
       };
@@ -73,6 +91,7 @@
       return {
         expression: source,
         displayExpression: source,
+        isEmpty: false,
         regex: null,
         error: error
       };
@@ -89,6 +108,13 @@
     var matches;
 
     if (parsed.error) {
+      return {
+        parsed: parsed,
+        matches: []
+      };
+    }
+
+    if (parsed.isEmpty) {
       return {
         parsed: parsed,
         matches: []
@@ -123,11 +149,13 @@
     }
 
     WORD_LIST = words.slice();
+    setWordListStatus("custom", null, false, null);
     return WORD_LIST.slice();
   }
 
-  function resetWordList() {
+  function resetWordList(error, url) {
     WORD_LIST = DEFAULT_WORD_LIST.slice();
+    setWordListStatus("default", url, Boolean(error), error || null);
     return WORD_LIST.slice();
   }
 
@@ -144,31 +172,43 @@
 
   async function setWordListUrl(wordListUrl) {
     if (!wordListUrl) {
-      return resetWordList();
+      return resetWordList("missing-url", null);
     }
 
     if (typeof fetch !== "function") {
-      return resetWordList();
+      return resetWordList("fetch-unavailable", wordListUrl);
     }
 
     try {
-      var response = await fetch(wordListUrl);
+      var response = await fetch(wordListUrl, { cache: "no-store" });
       var words;
 
       if (!response || !response.ok) {
-        return resetWordList();
+        return resetWordList("http-error", wordListUrl);
       }
 
       words = parseWordListText(await response.text());
 
       if (words.length === 0) {
-        return resetWordList();
+        return resetWordList("empty-list", wordListUrl);
       }
 
-      return setWordList(words);
+      WORD_LIST = words.slice();
+      setWordListStatus("url", wordListUrl, false, null);
+      return WORD_LIST.slice();
     } catch (error) {
-      return resetWordList();
+      return resetWordList("network-error", wordListUrl);
     }
+  }
+
+  function getWordListStatus() {
+    return {
+      source: WORD_LIST_STATUS.source,
+      url: WORD_LIST_STATUS.url,
+      fallback: WORD_LIST_STATUS.fallback,
+      error: WORD_LIST_STATUS.error,
+      wordCount: WORD_LIST.length
+    };
   }
 
   function buildWidgetMarkup(expression) {
@@ -190,6 +230,16 @@
         header +
         meta +
         '<div class="words-widget-error">Invalid regular expression</div>' +
+        "</div>"
+      );
+    }
+
+    if (result.parsed.isEmpty) {
+      return (
+        '<div class="words-widget" role="status" aria-live="polite">' +
+        header +
+        meta +
+        '<div class="words-widget-empty">Enter a regex pattern to search.</div>' +
         "</div>"
       );
     }
@@ -276,6 +326,7 @@
     mountWidget: mountWidget,
     bindForm: bindForm,
     setWordList: setWordList,
-    setWordListUrl: setWordListUrl
+    setWordListUrl: setWordListUrl,
+    getWordListStatus: getWordListStatus
   };
 });

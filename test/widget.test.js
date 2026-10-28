@@ -6,7 +6,8 @@ const {
   mountWidget,
   bindForm,
   setWordList,
-  setWordListUrl
+  setWordListUrl,
+  getWordListStatus
 } = require("../src/widget.js");
 
 const DEFAULT_WORDS = [
@@ -32,12 +33,12 @@ const DEFAULT_WORDS = [
   "watermelon"
 ];
 
-test("buildWidgetMarkup defaults to full list when expression is empty", () => {
+test("buildWidgetMarkup does not search when expression is empty", () => {
   const html = buildWidgetMarkup();
-  assert.match(html, /Pattern: \(all words\)/);
-  assert.match(html, /20 matches/);
-  assert.match(html, /apple/);
-  assert.match(html, /watermelon/);
+  assert.match(html, /Pattern: \(enter a regex\)/);
+  assert.match(html, /Enter a regex pattern to search\./);
+  assert.doesNotMatch(html, /20 matches/);
+  assert.doesNotMatch(html, /apple/);
 });
 
 test("buildWidgetMarkup matches words with plain expression", () => {
@@ -149,9 +150,13 @@ test("bindForm throws when input is invalid", () => {
 test("setWordList updates search source and returns a copy", () => {
   const customWords = ["alpha", "beta", "gamma"];
   const result = setWordList(customWords);
+  const status = getWordListStatus();
 
   assert.deepEqual(result, customWords);
   assert.notEqual(result, customWords);
+  assert.equal(status.source, "custom");
+  assert.equal(status.fallback, false);
+  assert.equal(status.wordCount, 3);
 
   const html = buildWidgetMarkup("a$");
   assert.match(html, /3 matches/);
@@ -170,8 +175,12 @@ test("setWordList throws for invalid values", () => {
 
 test("setWordListUrl loads newline-delimited words from URL", async () => {
   const originalFetch = global.fetch;
+  let fetchUrl;
+  let fetchOptions;
 
-  global.fetch = async function () {
+  global.fetch = async function (url, options) {
+    fetchUrl = url;
+    fetchOptions = options;
     return {
       ok: true,
       async text() {
@@ -182,7 +191,15 @@ test("setWordListUrl loads newline-delimited words from URL", async () => {
 
   try {
     const loadedWords = await setWordListUrl("/some/url");
+    const status = getWordListStatus();
+
     assert.deepEqual(loadedWords, ["cobra", "coral", "comet"]);
+    assert.equal(fetchUrl, "/some/url");
+    assert.deepEqual(fetchOptions, { cache: "no-store" });
+    assert.equal(status.source, "url");
+    assert.equal(status.fallback, false);
+    assert.equal(status.error, null);
+    assert.equal(status.wordCount, 3);
 
     const html = buildWidgetMarkup("^co");
     assert.match(html, /3 matches/);
@@ -201,6 +218,12 @@ test("setWordListUrl falls back to defaults when URL is missing or fetch fails",
 
   setWordList(["alpha"]);
   await setWordListUrl();
+  let status = getWordListStatus();
+  assert.equal(status.source, "default");
+  assert.equal(status.fallback, true);
+  assert.equal(status.error, "missing-url");
+  assert.equal(status.wordCount, DEFAULT_WORDS.length);
+
   let html = buildWidgetMarkup("^a");
   assert.match(html, /1 matches/);
   assert.match(html, /apple/);
@@ -212,6 +235,13 @@ test("setWordListUrl falls back to defaults when URL is missing or fetch fails",
 
   setWordList(["beta"]);
   await setWordListUrl("/broken/url");
+  status = getWordListStatus();
+  assert.equal(status.source, "default");
+  assert.equal(status.fallback, true);
+  assert.equal(status.error, "network-error");
+  assert.equal(status.url, "/broken/url");
+  assert.equal(status.wordCount, DEFAULT_WORDS.length);
+
   html = buildWidgetMarkup("^b");
   assert.match(html, /1 matches/);
   assert.match(html, /banana/);

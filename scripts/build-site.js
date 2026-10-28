@@ -1,8 +1,21 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
+const { execFileSync } = require("node:child_process");
+
+function getCacheBustToken(rootDir) {
+  try {
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      cwd: rootDir,
+      encoding: "utf8"
+    }).trim();
+  } catch (error) {
+    return String(Date.now());
+  }
+}
 
 async function buildSite() {
   const rootDir = path.resolve(__dirname, "..");
+  const cacheBustToken = getCacheBustToken(rootDir);
   const exampleHtmlPath = path.join(rootDir, "example", "index.html");
   const srcWidgetPath = path.join(rootDir, "src", "widget.js");
   const srcWordsPath = path.join(rootDir, "src", "words");
@@ -14,8 +27,8 @@ async function buildSite() {
 
   const html = await fs.readFile(exampleHtmlPath, "utf8");
   const buildHtml = html
-    .replaceAll("../src/widget.js", "./widget.js")
-    .replaceAll("../src/words", "./words");
+    .replaceAll("../src/widget.js", "./widget.js?v=" + cacheBustToken)
+    .replaceAll("../src/words", "./words?v=" + cacheBustToken);
 
   await fs.mkdir(buildDir, { recursive: true });
 
@@ -25,7 +38,7 @@ async function buildSite() {
     fs.copyFile(srcWordsPath, buildWordsPath)
   ]);
 
-  console.log("Built mini site in ./build");
+  console.log("Built mini site in ./build (cache token: " + cacheBustToken + ")");
 }
 
 buildSite().catch((error) => {

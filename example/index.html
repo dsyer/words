@@ -78,6 +78,17 @@
         color: #b91c1c;
         font-weight: 600;
       }
+
+      .load-status {
+        margin: 0 0 0.75rem;
+        font-size: 0.875rem;
+        color: #334155;
+      }
+
+      .load-status-warning {
+        color: #92400e;
+        font-weight: 600;
+      }
     </style>
   </head>
   <body>
@@ -89,10 +100,15 @@
         type="text"
         placeholder="Try ^p..$ or /berry$/i"
         value="^p..$"
+        autocorrect="off"
+        autocapitalize="off"
+        autocomplete="off"
+        spellcheck="false"
       />
       <button type="submit">Search words</button>
     </form>
 
+    <p id="load-status" class="load-status" role="status" aria-live="polite"></p>
     <div id="widget-target"></div>
 
     <script src="../src/widget.js"></script>
@@ -100,9 +116,25 @@
       const target = document.getElementById("widget-target");
       const form = document.getElementById("widget-form");
       const input = document.getElementById("widget-message");
+      const loadStatus = document.getElementById("load-status");
+      const wordsUrl = "../src/words";
+
+      function renderLoadStatus(status) {
+        if (status.source === "url") {
+          loadStatus.textContent = "Word list loaded from URL (" + status.wordCount + " words).";
+          loadStatus.className = "load-status";
+          return;
+        }
+
+        loadStatus.textContent =
+          "Using fallback word list (" + status.wordCount + " words)." +
+          (status.error ? " Reason: " + status.error + "." : "");
+        loadStatus.className = "load-status load-status-warning";
+      }
 
       async function initializeWidget() {
-        await window.WordsWidget.setWordListUrl("../src/words");
+        await window.WordsWidget.setWordListUrl(wordsUrl);
+        renderLoadStatus(window.WordsWidget.getWordListStatus());
         window.WordsWidget.bindForm(form, input, target);
       }
 
